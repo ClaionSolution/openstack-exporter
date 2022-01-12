@@ -24,7 +24,8 @@ var defaultNeutronMetrics = []Metric{
 	{Name: "floating_ips", Fn: ListFloatingIps},
 	{Name: "floating_ips_associated_not_active"},
 	{Name: "floating_ip", Labels: []string{"id", "floating_network_id", "router_id", "status", "project_id", "floating_ip_address"}},
-	{Name: "networks", Fn: ListNetworks},
+	{Name: "network", Labels: []string{"id", "name", "admin_state_up", "status", "tenant_id", "project_id"}, Fn: ListNetworks},
+	{Name: "networks"},
 	{Name: "security_groups", Fn: ListSecGroups},
 	{Name: "subnets", Fn: ListSubnets},
 	{Name: "port", Labels: []string{"uuid", "network_id", "mac_address", "device_owner", "status", "binding_vif_type", "admin_state_up", "device_id"}, Fn: ListPorts},
@@ -148,6 +149,12 @@ func ListNetworks(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) 
 	if err != nil {
 		return err
 	}
+
+	for _, network := range allNetworks {
+		ch <- prometheus.MustNewConstMetric(exporter.Metrics["network"].Metric,
+			prometheus.GaugeValue, 1, network.ID, network.Name, strconv.FormatBool(network.AdminStateUp), network.Status, network.TenantID, network.ProjectID)
+	}
+
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["networks"].Metric,
 		prometheus.GaugeValue, float64(len(allNetworks)))
 
