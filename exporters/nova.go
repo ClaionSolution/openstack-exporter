@@ -66,7 +66,7 @@ var defaultNovaMetrics = []Metric{
 	{Name: "security_groups", Labels: []string{"region_name"}, Fn: ListComputeSecGroups},
 	{Name: "total_vms", Labels: []string{"region_name"}, Fn: ListAllServers},
 	{Name: "agent_state", Labels: []string{"id", "hostname", "service", "adminState", "zone", "disabledReason", "region_name"}, Fn: ListNovaAgentState},
-	{Name: "running_vms", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}, Fn: ListHypervisors},
+	{Name: "running_vms", Labels: []string{"id", "hostname", "availability_zone", "aggregates", "host_ip", "region_name"}, Fn: ListHypervisors},
 	{Name: "current_workload", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}},
 	{Name: "vcpus_available", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}},
 	{Name: "vcpus_used", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}},
@@ -185,7 +185,8 @@ func ListHypervisors(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metri
 			availabilityZone = val
 		}
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["running_vms"].Metric,
-			prometheus.GaugeValue, float64(hypervisor.RunningVMs), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap),
+			prometheus.GaugeValue, float64(hypervisor.RunningVMs),
+			hypervisor.ID, hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap), hypervisor.HostIP,
 			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["current_workload"].Metric,
