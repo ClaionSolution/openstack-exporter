@@ -61,29 +61,29 @@ type NovaExporter struct {
 }
 
 var defaultNovaMetrics = []Metric{
-	{Name: "flavors", Fn: ListFlavors},
-	{Name: "availability_zones", Fn: ListAZs},
-	{Name: "security_groups", Fn: ListComputeSecGroups},
-	{Name: "total_vms", Fn: ListAllServers},
-	{Name: "agent_state", Labels: []string{"id", "hostname", "service", "adminState", "zone", "disabledReason"}, Fn: ListNovaAgentState},
-	{Name: "running_vms", Labels: []string{"hostname", "availability_zone", "aggregates"}, Fn: ListHypervisors},
-	{Name: "current_workload", Labels: []string{"hostname", "availability_zone", "aggregates"}},
-	{Name: "vcpus_available", Labels: []string{"hostname", "availability_zone", "aggregates"}},
-	{Name: "vcpus_used", Labels: []string{"hostname", "availability_zone", "aggregates"}},
-	{Name: "memory_available_bytes", Labels: []string{"hostname", "availability_zone", "aggregates"}},
-	{Name: "memory_used_bytes", Labels: []string{"hostname", "availability_zone", "aggregates"}},
-	{Name: "local_storage_available_bytes", Labels: []string{"hostname", "availability_zone", "aggregates"}},
-	{Name: "local_storage_used_bytes", Labels: []string{"hostname", "availability_zone", "aggregates"}},
-	{Name: "free_disk_bytes", Labels: []string{"hostname", "availability_zone", "aggregates"}},
+	{Name: "flavors", Labels: []string{"region_name"}, Fn: ListFlavors},
+	{Name: "availability_zones", Labels: []string{"region_name"}, Fn: ListAZs},
+	{Name: "security_groups", Labels: []string{"region_name"}, Fn: ListComputeSecGroups},
+	{Name: "total_vms", Labels: []string{"region_name"}, Fn: ListAllServers},
+	{Name: "agent_state", Labels: []string{"id", "hostname", "service", "adminState", "zone", "disabledReason", "region_name"}, Fn: ListNovaAgentState},
+	{Name: "running_vms", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}, Fn: ListHypervisors},
+	{Name: "current_workload", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}},
+	{Name: "vcpus_available", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}},
+	{Name: "vcpus_used", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}},
+	{Name: "memory_available_bytes", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}},
+	{Name: "memory_used_bytes", Labels: []string{"hostname", "availability_zone", "aggregates", "resgion_name"}},
+	{Name: "local_storage_available_bytes", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}},
+	{Name: "local_storage_used_bytes", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}},
+	{Name: "free_disk_bytes", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}},
 	{Name: "server_status", Labels: []string{"id", "status", "name", "tenant_id", "user_id", "address_ipv4",
-		"address_ipv6", "host_id", "hypervisor_hostname", "uuid", "availability_zone", "flavor_id"}},
-	{Name: "limits_vcpus_max", Labels: []string{"tenant", "tenant_id"}, Fn: ListComputeLimits, Slow: true},
-	{Name: "limits_vcpus_used", Labels: []string{"tenant", "tenant_id"}, Slow: true},
-	{Name: "limits_memory_max", Labels: []string{"tenant", "tenant_id"}, Slow: true},
-	{Name: "limits_memory_used", Labels: []string{"tenant", "tenant_id"}, Slow: true},
-	{Name: "limits_instances_used", Labels: []string{"tenant", "tenant_id"}, Slow: true},
-	{Name: "limits_instances_max", Labels: []string{"tenant", "tenant_id"}, Slow: true},
-	{Name: "server_local_gb", Labels: []string{"name", "id", "tenant_id"}, Fn: ListUsage, Slow: true},
+		"address_ipv6", "host_id", "hypervisor_hostname", "uuid", "availability_zone", "flavor_id", "region_name"}},
+	{Name: "limits_vcpus_max", Labels: []string{"tenant", "tenant_id", "region_name"}, Fn: ListComputeLimits, Slow: true},
+	{Name: "limits_vcpus_used", Labels: []string{"tenant", "tenant_id", "region_name"}, Slow: true},
+	{Name: "limits_memory_max", Labels: []string{"tenant", "tenant_id", "region_name"}, Slow: true},
+	{Name: "limits_memory_used", Labels: []string{"tenant", "tenant_id", "region_name"}, Slow: true},
+	{Name: "limits_instances_used", Labels: []string{"tenant", "tenant_id", "region_name"}, Slow: true},
+	{Name: "limits_instances_max", Labels: []string{"tenant", "tenant_id", "region_name"}, Slow: true},
+	{Name: "server_local_gb", Labels: []string{"name", "id", "tenant_id", "region_name"}, Fn: ListUsage, Slow: true},
 }
 
 func NewNovaExporter(config *ExporterConfig) (*NovaExporter, error) {
@@ -134,7 +134,8 @@ func ListNovaAgentState(exporter *BaseOpenStackExporter, ch chan<- prometheus.Me
 			state = 1
 		}
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["agent_state"].Metric,
-			prometheus.CounterValue, float64(state), service.ID, service.Host, service.Binary, service.Status, service.Zone, service.DisabledReason)
+			prometheus.CounterValue, float64(state), service.ID, service.Host, service.Binary, service.Status, service.Zone, service.DisabledReason,
+			endpointOpts["compute"].Region)
 	}
 
 	return nil
@@ -184,31 +185,40 @@ func ListHypervisors(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metri
 			availabilityZone = val
 		}
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["running_vms"].Metric,
-			prometheus.GaugeValue, float64(hypervisor.RunningVMs), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap))
+			prometheus.GaugeValue, float64(hypervisor.RunningVMs), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap),
+			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["current_workload"].Metric,
-			prometheus.GaugeValue, float64(hypervisor.CurrentWorkload), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap))
+			prometheus.GaugeValue, float64(hypervisor.CurrentWorkload), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap),
+			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["vcpus_available"].Metric,
-			prometheus.GaugeValue, float64(hypervisor.VCPUs), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap))
+			prometheus.GaugeValue, float64(hypervisor.VCPUs), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap),
+			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["vcpus_used"].Metric,
-			prometheus.GaugeValue, float64(hypervisor.VCPUsUsed), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap))
+			prometheus.GaugeValue, float64(hypervisor.VCPUsUsed), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap),
+			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["memory_available_bytes"].Metric,
-			prometheus.GaugeValue, float64(hypervisor.MemoryMB*MEGABYTE), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap))
+			prometheus.GaugeValue, float64(hypervisor.MemoryMB*MEGABYTE), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap),
+			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["memory_used_bytes"].Metric,
-			prometheus.GaugeValue, float64(hypervisor.MemoryMBUsed*MEGABYTE), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap))
+			prometheus.GaugeValue, float64(hypervisor.MemoryMBUsed*MEGABYTE), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap),
+			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["local_storage_available_bytes"].Metric,
-			prometheus.GaugeValue, float64(hypervisor.LocalGB*GIGABYTE), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap))
+			prometheus.GaugeValue, float64(hypervisor.LocalGB*GIGABYTE), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap),
+			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["local_storage_used_bytes"].Metric,
-			prometheus.GaugeValue, float64(hypervisor.LocalGBUsed*GIGABYTE), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap))
+			prometheus.GaugeValue, float64(hypervisor.LocalGBUsed*GIGABYTE), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap),
+			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["free_disk_bytes"].Metric,
-			prometheus.GaugeValue, float64(hypervisor.FreeDiskGB*GIGABYTE), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap))
+			prometheus.GaugeValue, float64(hypervisor.FreeDiskGB*GIGABYTE), hypervisor.HypervisorHostname, availabilityZone, aggregatesLabel(hypervisor.Service.Host, hostToAggrMap),
+			endpointOpts["compute"].Region)
 
 	}
 
@@ -229,7 +239,8 @@ func ListFlavors(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) e
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["flavors"].Metric,
-		prometheus.GaugeValue, float64(len(allFlavors)))
+		prometheus.GaugeValue, float64(len(allFlavors)),
+		endpointOpts["compute"].Region)
 
 	return nil
 }
@@ -247,7 +258,8 @@ func ListAZs(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) error
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["availability_zones"].Metric,
-		prometheus.GaugeValue, float64(len(allAZs)))
+		prometheus.GaugeValue, float64(len(allAZs)),
+		endpointOpts["compute"].Region)
 
 	return nil
 }
@@ -265,7 +277,8 @@ func ListComputeSecGroups(exporter *BaseOpenStackExporter, ch chan<- prometheus.
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["security_groups"].Metric,
-		prometheus.GaugeValue, float64(len(allSecurityGroups)))
+		prometheus.GaugeValue, float64(len(allSecurityGroups)),
+		endpointOpts["compute"].Region)
 
 	return nil
 }
@@ -290,13 +303,16 @@ func ListAllServers(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["total_vms"].Metric,
-		prometheus.GaugeValue, float64(len(allServers)))
+		prometheus.GaugeValue, float64(len(allServers)),
+		endpointOpts["compute"].Region)
 
 	// Server status metrics
 	for _, server := range allServers {
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["server_status"].Metric,
 			prometheus.GaugeValue, float64(mapServerStatus(server.Status)), server.ID, server.Status, server.Name, server.TenantID,
-			server.UserID, server.AccessIPv4, server.AccessIPv6, server.HostID, server.HypervisorHostname, server.ID, server.AvailabilityZone, fmt.Sprintf("%v", server.Flavor["id"]))
+			server.UserID, server.AccessIPv4, server.AccessIPv6, server.HostID, server.HypervisorHostname, server.ID, server.AvailabilityZone, fmt.Sprintf("%v", server.Flavor["id"]),
+			endpointOpts["compute"].Region)
+
 	}
 
 	return nil
@@ -340,22 +356,29 @@ func ListComputeLimits(exporter *BaseOpenStackExporter, ch chan<- prometheus.Met
 		}
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["limits_vcpus_max"].Metric,
-			prometheus.GaugeValue, float64(limits.Absolute.MaxTotalCores), p.Name, p.ID)
+			prometheus.GaugeValue, float64(limits.Absolute.MaxTotalCores), p.Name, p.ID,
+			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["limits_vcpus_used"].Metric,
-			prometheus.GaugeValue, float64(limits.Absolute.TotalCoresUsed), p.Name, p.ID)
+			prometheus.GaugeValue, float64(limits.Absolute.TotalCoresUsed), p.Name, p.ID,
+			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["limits_memory_max"].Metric,
-			prometheus.GaugeValue, float64(limits.Absolute.MaxTotalRAMSize), p.Name, p.ID)
+			prometheus.GaugeValue, float64(limits.Absolute.MaxTotalRAMSize), p.Name, p.ID,
+			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["limits_memory_used"].Metric,
-			prometheus.GaugeValue, float64(limits.Absolute.TotalRAMUsed), p.Name, p.ID)
+			prometheus.GaugeValue, float64(limits.Absolute.TotalRAMUsed), p.Name, p.ID,
+			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["limits_instances_used"].Metric,
-			prometheus.GaugeValue, float64(limits.Absolute.TotalInstancesUsed), p.Name, p.ID)
+			prometheus.GaugeValue, float64(limits.Absolute.TotalInstancesUsed), p.Name, p.ID,
+			endpointOpts["compute"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["limits_instances_max"].Metric,
-			prometheus.GaugeValue, float64(limits.Absolute.MaxTotalInstances), p.Name, p.ID)
+			prometheus.GaugeValue, float64(limits.Absolute.MaxTotalInstances), p.Name, p.ID,
+			endpointOpts["compute"].Region)
+
 	}
 
 	return nil
@@ -377,7 +400,9 @@ func ListUsage(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) err
 	for _, tenant := range allTenantsUsage {
 		for _, server := range tenant.ServerUsages {
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["server_local_gb"].Metric,
-				prometheus.GaugeValue, float64(server.LocalGB), server.Name, server.InstanceID, tenant.TenantID)
+				prometheus.GaugeValue, float64(server.LocalGB), server.Name, server.InstanceID, tenant.TenantID,
+				endpointOpts["compute"].Region)
+
 		}
 
 	}

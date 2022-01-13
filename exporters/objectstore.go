@@ -11,8 +11,8 @@ type ObjectStoreExporter struct {
 }
 
 var defaultObjectStoreMetrics = []Metric{
-	{Name: "objects", Labels: []string{"container_name"}, Fn: ListContainers},
-	{Name: "bytes", Labels: []string{"container_name"}, Fn: nil},
+	{Name: "objects", Labels: []string{"container_name", "region_name"}, Fn: ListContainers},
+	{Name: "bytes", Labels: []string{"container_name", "region_name"}, Fn: nil},
 }
 
 func NewObjectStoreExporter(config *ExporterConfig) (*ObjectStoreExporter, error) {
@@ -44,9 +44,11 @@ func ListContainers(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric
 
 		for _, c := range containerList {
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["objects"].Metric,
-				prometheus.GaugeValue, float64(c.Count), c.Name)
+				prometheus.GaugeValue, float64(c.Count), c.Name,
+				endpointOpts["object-store"].Region)
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["bytes"].Metric,
-				prometheus.GaugeValue, float64(c.Bytes), c.Name)
+				prometheus.GaugeValue, float64(c.Bytes), c.Name,
+				endpointOpts["object-store"].Region)
 		}
 		return true, nil
 	})

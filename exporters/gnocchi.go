@@ -11,10 +11,10 @@ type GnocchiExporter struct {
 }
 
 var defaultGnocchiMetrics = []Metric{
-	{Name: "status_metricd_processors", Fn: getMetricStatus},
-	{Name: "status_metric_having_measures_to_process", Fn: nil},
-	{Name: "status_measures_to_process", Fn: nil},
-	{Name: "total_metrics", Fn: ListAllMetrics},
+	{Name: "status_metricd_processors", Labels: []string{"region_name"}, Fn: getMetricStatus},
+	{Name: "status_metric_having_measures_to_process", Labels: []string{"region_name"}, Fn: nil},
+	{Name: "status_measures_to_process", Labels: []string{"region_name"}, Fn: nil},
+	{Name: "total_metrics", Labels: []string{"region_name"}, Fn: ListAllMetrics},
 }
 
 func NewGnocchiExporter(config *ExporterConfig) (*GnocchiExporter, error) {
@@ -46,7 +46,8 @@ func ListAllMetrics(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric
 		return err
 	}
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["total_metrics"].Metric,
-		prometheus.GaugeValue, float64(len(allMetrics)))
+		prometheus.GaugeValue, float64(len(allMetrics)),
+		endpointOpts["gnocchi"].Region)
 
 	return nil
 }
@@ -59,11 +60,14 @@ func getMetricStatus(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metri
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["status_metricd_processors"].Metric,
-		prometheus.GaugeValue, float64(len(metricStatus.Metricd.Processors)))
+		prometheus.GaugeValue, float64(len(metricStatus.Metricd.Processors)),
+		endpointOpts["gnocchi"].Region)
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["status_metric_having_measures_to_process"].Metric,
-		prometheus.GaugeValue, float64(metricStatus.Storage.Summary.Metrics))
+		prometheus.GaugeValue, float64(metricStatus.Storage.Summary.Metrics),
+		endpointOpts["gnocchi"].Region)
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["status_measures_to_process"].Metric,
-		prometheus.GaugeValue, float64(metricStatus.Storage.Summary.Measures))
+		prometheus.GaugeValue, float64(metricStatus.Storage.Summary.Measures),
+		endpointOpts["gnocchi"].Region)
 
 	return nil
 }

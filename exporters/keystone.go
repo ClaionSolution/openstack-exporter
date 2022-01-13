@@ -16,12 +16,12 @@ type KeystoneExporter struct {
 }
 
 var defaultKeystoneMetrics = []Metric{
-	{Name: "domains", Fn: ListDomains},
-	{Name: "users", Fn: ListUsers},
-	{Name: "groups", Fn: ListGroups},
-	{Name: "projects", Fn: ListProjects},
-	{Name: "project_info", Labels: []string{"is_domain", "description", "domain_id", "enabled", "id", "name", "parent_id"}},
-	{Name: "regions", Fn: ListRegions},
+	{Name: "domains", Labels: []string{"region_name"}, Fn: ListDomains},
+	{Name: "users", Labels: []string{"region_name"}, Fn: ListUsers},
+	{Name: "groups", Labels: []string{"region_name"}, Fn: ListGroups},
+	{Name: "projects", Labels: []string{"region_name"}, Fn: ListProjects},
+	{Name: "project_info", Labels: []string{"is_domain", "description", "domain_id", "enabled", "id", "name", "parent_id", "region_name"}},
+	{Name: "regions", Labels: []string{"region_name"}, Fn: ListRegions},
 }
 
 func NewKeystoneExporter(config *ExporterConfig) (*KeystoneExporter, error) {
@@ -57,7 +57,8 @@ func ListDomains(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) e
 		return err
 	}
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["domains"].Metric,
-		prometheus.GaugeValue, float64(len(allDomains)))
+		prometheus.GaugeValue, float64(len(allDomains)),
+		endpointOpts["identity"].Region)
 
 	return nil
 }
@@ -76,12 +77,14 @@ func ListProjects(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) 
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["projects"].Metric,
-		prometheus.GaugeValue, float64(len(allProjects)))
+		prometheus.GaugeValue, float64(len(allProjects)),
+		endpointOpts["identity"].Region)
 	for _, p := range allProjects {
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["project_info"].Metric,
 			prometheus.GaugeValue, 1.0, strconv.FormatBool(p.IsDomain),
 			p.Description, p.DomainID, strconv.FormatBool(p.Enabled), p.ID, p.Name,
-			p.ParentID)
+			p.ParentID,
+			endpointOpts["identity"].Region)
 	}
 
 	return nil
@@ -100,7 +103,8 @@ func ListRegions(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) e
 		return err
 	}
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["regions"].Metric,
-		prometheus.GaugeValue, float64(len(allRegions)))
+		prometheus.GaugeValue, float64(len(allRegions)),
+		endpointOpts["identity"].Region)
 
 	return nil
 }
@@ -118,7 +122,8 @@ func ListUsers(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) err
 		return err
 	}
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["users"].Metric,
-		prometheus.GaugeValue, float64(len(allUsers)))
+		prometheus.GaugeValue, float64(len(allUsers)),
+		endpointOpts["identity"].Region)
 
 	return nil
 }
@@ -137,7 +142,8 @@ func ListGroups(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) er
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["groups"].Metric,
-		prometheus.GaugeValue, float64(len(allGroups)))
+		prometheus.GaugeValue, float64(len(allGroups)),
+		endpointOpts["identity"].Region)
 
 	return nil
 }

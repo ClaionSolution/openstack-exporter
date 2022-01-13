@@ -51,10 +51,10 @@ type LoadbalancerExporter struct {
 }
 
 var defaultLoadbalancerMetrics = []Metric{
-	{Name: "total_loadbalancers", Fn: ListAllLoadbalancers},
-	{Name: "loadbalancer_status", Labels: []string{"id", "name", "project_id", "operating_status", "provisioning_status", "provider", "vip_address"}},
-	{Name: "total_amphorae", Fn: ListAllAmphorae},
-	{Name: "amphora_status", Labels: []string{"id", "loadbalancer_id", "compute_id", "status", "role", "lb_network_ip", "ha_ip"}},
+	{Name: "total_loadbalancers", Labels: []string{"region_name"}, Fn: ListAllLoadbalancers},
+	{Name: "loadbalancer_status", Labels: []string{"id", "name", "project_id", "operating_status", "provisioning_status", "provider", "vip_address", "region_name"}},
+	{Name: "total_amphorae", Labels: []string{"region_name"}, Fn: ListAllAmphorae},
+	{Name: "amphora_status", Labels: []string{"id", "loadbalancer_id", "compute_id", "status", "role", "lb_network_ip", "ha_ip", "region_name"}},
 }
 
 func NewLoadbalancerExporter(config *ExporterConfig) (*LoadbalancerExporter, error) {
@@ -82,12 +82,15 @@ func ListAllLoadbalancers(exporter *BaseOpenStackExporter, ch chan<- prometheus.
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["total_loadbalancers"].Metric,
-		prometheus.GaugeValue, float64(len(allLoadbalancers)))
+		prometheus.GaugeValue, float64(len(allLoadbalancers)),
+		endpointOpts["load-balancer"].Region)
 	// Loadbalancer status metrics
 	for _, loadbalancer := range allLoadbalancers {
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["loadbalancer_status"].Metric,
 			prometheus.GaugeValue, float64(mapLoadbalancerStatus(loadbalancer.OperatingStatus)), loadbalancer.ID, loadbalancer.Name, loadbalancer.ProjectID,
-			loadbalancer.OperatingStatus, loadbalancer.ProvisioningStatus, loadbalancer.Provider, loadbalancer.VipAddress)
+			loadbalancer.OperatingStatus, loadbalancer.ProvisioningStatus, loadbalancer.Provider, loadbalancer.VipAddress,
+			endpointOpts["load-balancer"].Region)
+
 	}
 	return nil
 }
@@ -104,12 +107,16 @@ func ListAllAmphorae(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metri
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["total_amphorae"].Metric,
-		prometheus.GaugeValue, float64(len(allAmphorae)))
+		prometheus.GaugeValue, float64(len(allAmphorae)),
+		endpointOpts["load-balancer"].Region)
+
 	// Loadbalancer status metrics
 	for _, amphora := range allAmphorae {
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["amphora_status"].Metric,
 			prometheus.GaugeValue, float64(mapAmphoraStatus(amphora.Status)), amphora.ID, amphora.LoadbalancerID, amphora.ComputeID, amphora.Status,
-			amphora.Role, amphora.LBNetworkIP, amphora.HAIP)
+			amphora.Role, amphora.LBNetworkIP, amphora.HAIP,
+			endpointOpts["load-balancer"].Region)
+
 	}
 	return nil
 }

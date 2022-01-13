@@ -10,7 +10,7 @@ type GlanceExporter struct {
 }
 
 var defaultGlanceMetrics = []Metric{
-	{Name: "images", Fn: ListImages},
+	{Name: "images", Labels: []string{"region_name"}, Fn: ListImages},
 }
 
 func NewGlanceExporter(config *ExporterConfig) (*GlanceExporter, error) {
@@ -46,7 +46,8 @@ func ListImages(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) er
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["images"].Metric,
-		prometheus.GaugeValue, float64(len(allImages)))
+		prometheus.GaugeValue, float64(len(allImages)),
+		endpointOpts["image"].Region)
 
 	return nil
 }

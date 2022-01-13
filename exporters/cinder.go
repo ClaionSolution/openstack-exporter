@@ -54,16 +54,16 @@ func mapVolumeStatus(volStatus string) int {
 }
 
 var defaultCinderMetrics = []Metric{
-	{Name: "volumes", Fn: ListVolumes},
-	{Name: "snapshots", Fn: ListSnapshots},
-	{Name: "agent_state", Labels: []string{"uuid", "hostname", "service", "adminState", "zone", "disabledReason"}, Fn: ListCinderAgentState},
-	{Name: "volume_gb", Labels: []string{"id", "name", "status", "bootable", "tenant_id", "volume_type", "server_id"}, Fn: nil},
-	{Name: "volume_status", Labels: []string{"id", "name", "status", "bootable", "tenant_id", "size", "volume_type", "server_id"}, Fn: ListVolumesStatus, Slow: false, DeprecatedVersion: "1.4"},
-	{Name: "volume_status_counter", Labels: []string{"status"}, Fn: nil},
-	{Name: "pool_capacity_free_gb", Labels: []string{"name", "volume_backend_name", "vendor_name"}, Fn: ListCinderPoolCapacityFree},
-	{Name: "pool_capacity_total_gb", Labels: []string{"name", "volume_backend_name", "vendor_name"}, Fn: nil},
-	{Name: "limits_volume_max_gb", Labels: []string{"tenant", "tenant_id"}, Fn: ListVolumeLimits, Slow: true},
-	{Name: "limits_volume_used_gb", Labels: []string{"tenant", "tenant_id"}, Fn: nil, Slow: true},
+	{Name: "volumes", Labels: []string{"region_name"}, Fn: ListVolumes},
+	{Name: "snapshots", Labels: []string{"region_name"}, Fn: ListSnapshots},
+	{Name: "agent_state", Labels: []string{"uuid", "hostname", "service", "adminState", "zone", "disabledReason", "region_name"}, Fn: ListCinderAgentState},
+	{Name: "volume_gb", Labels: []string{"id", "name", "status", "bootable", "tenant_id", "volume_type", "server_id", "region_name"}, Fn: nil},
+	{Name: "volume_status", Labels: []string{"id", "name", "status", "bootable", "tenant_id", "size", "volume_type", "server_id", "region_name"}, Fn: ListVolumesStatus, Slow: false, DeprecatedVersion: "1.4"},
+	{Name: "volume_status_counter", Labels: []string{"status", "region_name"}, Fn: nil},
+	{Name: "pool_capacity_free_gb", Labels: []string{"name", "volume_backend_name", "vendor_name", "region_name"}, Fn: ListCinderPoolCapacityFree},
+	{Name: "pool_capacity_total_gb", Labels: []string{"name", "volume_backend_name", "vendor_name", "region_name"}, Fn: nil},
+	{Name: "limits_volume_max_gb", Labels: []string{"tenant", "tenant_id", "region_name"}, Fn: ListVolumeLimits, Slow: true},
+	{Name: "limits_volume_used_gb", Labels: []string{"tenant", "tenant_id", "region_name"}, Fn: nil, Slow: true},
 }
 
 func NewCinderExporter(config *ExporterConfig) (*CinderExporter, error) {
@@ -111,11 +111,14 @@ func ListVolumesStatus(exporter *BaseOpenStackExporter, ch chan<- prometheus.Met
 		if volume.Attachments != nil && len(volume.Attachments) > 0 {
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["volume_status"].Metric,
 				prometheus.GaugeValue, float64(mapVolumeStatus(volume.Status)), volume.ID, volume.Name,
-				volume.Status, volume.Bootable, volume.TenantID, strconv.Itoa(volume.Size), volume.VolumeType, volume.Attachments[0].ServerID)
+				volume.Status, volume.Bootable, volume.TenantID, strconv.Itoa(volume.Size), volume.VolumeType, volume.Attachments[0].ServerID,
+				endpointOpts["volume"].Region)
 		} else {
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["volume_status"].Metric,
 				prometheus.GaugeValue, float64(mapVolumeStatus(volume.Status)), volume.ID, volume.Name,
-				volume.Status, volume.Bootable, volume.TenantID, strconv.Itoa(volume.Size), volume.VolumeType, "")
+				volume.Status, volume.Bootable, volume.TenantID, strconv.Itoa(volume.Size), volume.VolumeType, "",
+				endpointOpts["volume"].Region)
+
 		}
 	}
 	return nil
@@ -142,18 +145,23 @@ func ListVolumes(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) e
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["volumes"].Metric,
-		prometheus.GaugeValue, float64(len(allVolumes)))
+		prometheus.GaugeValue, float64(len(allVolumes)),
+		endpointOpts["volume"].Region)
 
 	// Volume_gb metrics
 	for _, volume := range allVolumes {
 		if volume.Attachments != nil && len(volume.Attachments) > 0 {
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["volume_gb"].Metric,
 				prometheus.GaugeValue, float64(volume.Size), volume.ID, volume.Name,
-				volume.Status, volume.Bootable, volume.TenantID, volume.VolumeType, volume.Attachments[0].ServerID)
+				volume.Status, volume.Bootable, volume.TenantID, volume.VolumeType, volume.Attachments[0].ServerID,
+				endpointOpts["volume"].Region)
+
 		} else {
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["volume_gb"].Metric,
 				prometheus.GaugeValue, float64(volume.Size), volume.ID, volume.Name,
-				volume.Status, volume.Bootable, volume.TenantID, volume.VolumeType, "")
+				volume.Status, volume.Bootable, volume.TenantID, volume.VolumeType, "",
+				endpointOpts["volume"].Region)
+
 		}
 	}
 
@@ -190,7 +198,9 @@ func ListVolumes(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) e
 			exporter.Metrics["volume_status_counter"].Metric,
 			prometheus.GaugeValue,
 			float64(count),
-			status)
+			status,
+			endpointOpts["volume"].Region)
+
 	}
 
 	return nil
@@ -210,7 +220,8 @@ func ListSnapshots(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric)
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["snapshots"].Metric,
-		prometheus.GaugeValue, float64(len(allSnapshots)))
+		prometheus.GaugeValue, float64(len(allSnapshots)),
+		endpointOpts["volume"].Region)
 
 	return nil
 }
@@ -242,7 +253,9 @@ func ListCinderAgentState(exporter *BaseOpenStackExporter, ch chan<- prometheus.
 		}
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["agent_state"].Metric,
-			prometheus.CounterValue, float64(state), id, service.Host, service.Binary, service.Status, service.Zone, service.DisabledReason)
+			prometheus.CounterValue, float64(state), id, service.Host, service.Binary, service.Status, service.Zone, service.DisabledReason,
+			endpointOpts["volume"].Region)
+
 	}
 
 	return nil
@@ -265,9 +278,13 @@ func ListCinderPoolCapacityFree(exporter *BaseOpenStackExporter, ch chan<- prome
 
 	for _, stat := range allStats {
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["pool_capacity_free_gb"].Metric, prometheus.GaugeValue,
-			float64(stat.Capabilities.FreeCapacityGB), stat.Name, stat.Capabilities.VolumeBackendName, stat.Capabilities.VendorName)
+			float64(stat.Capabilities.FreeCapacityGB), stat.Name, stat.Capabilities.VolumeBackendName, stat.Capabilities.VendorName,
+			endpointOpts["volume"].Region)
+
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["pool_capacity_total_gb"].Metric, prometheus.GaugeValue,
-			float64(stat.Capabilities.TotalCapacityGB), stat.Name, stat.Capabilities.VolumeBackendName, stat.Capabilities.VendorName)
+			float64(stat.Capabilities.TotalCapacityGB), stat.Name, stat.Capabilities.VolumeBackendName, stat.Capabilities.VendorName,
+			endpointOpts["volume"].Region)
+
 	}
 	return nil
 }
@@ -310,10 +327,12 @@ func ListVolumeLimits(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metr
 		}
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["limits_volume_max_gb"].Metric,
-			prometheus.GaugeValue, float64(limits.Gigabytes.Limit), p.Name, p.ID)
+			prometheus.GaugeValue, float64(limits.Gigabytes.Limit), p.Name, p.ID,
+			endpointOpts["volume"].Region)
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["limits_volume_used_gb"].Metric,
-			prometheus.GaugeValue, float64(limits.Gigabytes.InUse), p.Name, p.ID)
+			prometheus.GaugeValue, float64(limits.Gigabytes.InUse), p.Name, p.ID,
+			endpointOpts["volume"].Region)
 
 	}
 

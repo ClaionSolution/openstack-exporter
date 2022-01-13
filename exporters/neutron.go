@@ -21,24 +21,24 @@ type NeutronExporter struct {
 }
 
 var defaultNeutronMetrics = []Metric{
-	{Name: "floating_ips", Fn: ListFloatingIps},
-	{Name: "floating_ips_associated_not_active"},
-	{Name: "floating_ip", Labels: []string{"id", "floating_network_id", "router_id", "status", "project_id", "floating_ip_address"}},
-	{Name: "network", Labels: []string{"id", "name", "admin_state_up", "status", "tenant_id", "project_id"}, Fn: ListNetworks},
-	{Name: "networks"},
-	{Name: "security_groups", Fn: ListSecGroups},
-	{Name: "subnets", Fn: ListSubnets},
-	{Name: "port", Labels: []string{"uuid", "network_id", "mac_address", "device_owner", "status", "binding_vif_type", "admin_state_up", "device_id"}, Fn: ListPorts},
-	{Name: "ports"},
-	{Name: "ports_no_ips"},
-	{Name: "ports_lb_not_active"},
-	{Name: "router", Labels: []string{"id", "name", "project_id", "admin_state_up", "status", "external_network_id"}},
-	{Name: "routers", Fn: ListRouters},
-	{Name: "routers_not_active"},
-	{Name: "l3_agent_of_router", Labels: []string{"router_id", "l3_agent_id", "ha_state", "agent_alive", "agent_admin_up", "agent_host"}},
-	{Name: "agent_state", Labels: []string{"id", "hostname", "service", "adminState"}, Fn: ListAgentStates},
-	{Name: "network_ip_availabilities_total", Labels: []string{"network_id", "network_name", "ip_version", "cidr", "subnet_name", "project_id"}, Fn: ListNetworkIPAvailabilities},
-	{Name: "network_ip_availabilities_used", Labels: []string{"network_id", "network_name", "ip_version", "cidr", "subnet_name", "project_id"}},
+	{Name: "floating_ips", Labels: []string{"region_name"}, Fn: ListFloatingIps},
+	{Name: "floating_ips_associated_not_active", Labels: []string{"region_name"}},
+	{Name: "floating_ip", Labels: []string{"id", "floating_network_id", "router_id", "status", "project_id", "floating_ip_address", "region_name"}},
+	{Name: "network", Labels: []string{"id", "name", "admin_state_up", "status", "tenant_id", "project_id", "region_name"}, Fn: ListNetworks},
+	{Name: "networks", Labels: []string{"region_name"}},
+	{Name: "security_groups", Labels: []string{"region_name"}, Fn: ListSecGroups},
+	{Name: "subnets", Labels: []string{"region_name"}, Fn: ListSubnets},
+	{Name: "port", Labels: []string{"uuid", "network_id", "mac_address", "device_owner", "status", "binding_vif_type", "admin_state_up", "device_id", "region_name"}, Fn: ListPorts},
+	{Name: "ports", Labels: []string{"region_name"}},
+	{Name: "ports_no_ips", Labels: []string{"region_name"}},
+	{Name: "ports_lb_not_active", Labels: []string{"region_name"}},
+	{Name: "router", Labels: []string{"id", "name", "project_id", "admin_state_up", "status", "external_network_id", "region_name"}},
+	{Name: "routers", Labels: []string{"region_name"}, Fn: ListRouters},
+	{Name: "routers_not_active", Labels: []string{"region_name"}},
+	{Name: "l3_agent_of_router", Labels: []string{"router_id", "l3_agent_id", "ha_state", "agent_alive", "agent_admin_up", "agent_host", "region_name"}},
+	{Name: "agent_state", Labels: []string{"id", "hostname", "service", "adminState", "region_name"}, Fn: ListAgentStates},
+	{Name: "network_ip_availabilities_total", Labels: []string{"network_id", "network_name", "ip_version", "cidr", "subnet_name", "project_id", "region_name"}, Fn: ListNetworkIPAvailabilities},
+	{Name: "network_ip_availabilities_used", Labels: []string{"network_id", "network_name", "ip_version", "cidr", "subnet_name", "project_id", "region_name"}},
 }
 
 // NewNeutronExporter : returns a pointer to NeutronExporter
@@ -79,7 +79,9 @@ func ListFloatingIps(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metri
 	failedFIPs := 0
 	for _, fip := range allFloatingIPs {
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["floating_ip"].Metric,
-			prometheus.GaugeValue, 1, fip.ID, fip.FloatingNetworkID, fip.RouterID, fip.Status, fip.ProjectID, fip.FloatingIP)
+			prometheus.GaugeValue, 1,
+			fip.ID, fip.FloatingNetworkID, fip.RouterID, fip.Status, fip.ProjectID, fip.FloatingIP,
+			endpointOpts["network"].Region)
 		if fip.FixedIP != "" {
 			if fip.Status != "ACTIVE" {
 				failedFIPs = failedFIPs + 1
@@ -88,9 +90,11 @@ func ListFloatingIps(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metri
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["floating_ips"].Metric,
-		prometheus.GaugeValue, float64(len(allFloatingIPs)))
+		prometheus.GaugeValue, float64(len(allFloatingIPs)),
+		endpointOpts["network"].Region)
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["floating_ips_associated_not_active"].Metric,
-		prometheus.GaugeValue, float64(failedFIPs))
+		prometheus.GaugeValue, float64(failedFIPs),
+		endpointOpts["network"].Region)
 
 	return nil
 }
@@ -130,7 +134,9 @@ func ListAgentStates(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metri
 		}
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["agent_state"].Metric,
-			prometheus.CounterValue, float64(state), id, agent.Host, agent.Binary, adminState)
+			prometheus.CounterValue, float64(state),
+			id, agent.Host, agent.Binary, adminState,
+			endpointOpts["network"].Region)
 	}
 
 	return nil
@@ -152,11 +158,14 @@ func ListNetworks(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) 
 
 	for _, network := range allNetworks {
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["network"].Metric,
-			prometheus.GaugeValue, 1, network.ID, network.Name, strconv.FormatBool(network.AdminStateUp), network.Status, network.TenantID, network.ProjectID)
+			prometheus.GaugeValue, 1,
+			network.ID, network.Name, strconv.FormatBool(network.AdminStateUp), network.Status, network.TenantID, network.ProjectID,
+			endpointOpts["network"].Region)
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["networks"].Metric,
-		prometheus.GaugeValue, float64(len(allNetworks)))
+		prometheus.GaugeValue, float64(len(allNetworks)),
+		endpointOpts["network"].Region)
 
 	return nil
 }
@@ -175,7 +184,8 @@ func ListSecGroups(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric)
 		return err
 	}
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["security_groups"].Metric,
-		prometheus.GaugeValue, float64(len(allSecurityGroups)))
+		prometheus.GaugeValue, float64(len(allSecurityGroups)),
+		endpointOpts["network"].Region)
 
 	return nil
 }
@@ -194,7 +204,8 @@ func ListSubnets(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) e
 		return err
 	}
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["subnets"].Metric,
-		prometheus.GaugeValue, float64(len(allSubnets)))
+		prometheus.GaugeValue, float64(len(allSubnets)),
+		endpointOpts["network"].Region)
 
 	return nil
 }
@@ -232,21 +243,26 @@ func ListPorts(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) err
 		}
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["port"].Metric,
-			prometheus.GaugeValue, 1, port.ID, port.NetworkID, port.MACAddress, port.DeviceOwner, port.Status, port.VIFType, strconv.FormatBool(port.AdminStateUp), port.DeviceID)
+			prometheus.GaugeValue, 1,
+			port.ID, port.NetworkID, port.MACAddress, port.DeviceOwner, port.Status, port.VIFType, strconv.FormatBool(port.AdminStateUp), port.DeviceID,
+			endpointOpts["network"].Region)
 	}
 
 	// NOTE(mnaser): We should deprecate this and users can replace it by
 	//               count(openstack_neutron_port)
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["ports"].Metric,
-		prometheus.GaugeValue, float64(len(allPorts)))
+		prometheus.GaugeValue, float64(len(allPorts)),
+		endpointOpts["network"].Region)
 
 	// NOTE(mnaser): We should deprecate this and users can replace it by:
 	//               count(openstack_neutron_port{device_owner="neutron:LOADBALANCERV2",status!="ACTIVE"})
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["ports_lb_not_active"].Metric,
-		prometheus.GaugeValue, lbaasPortsInactive)
+		prometheus.GaugeValue, lbaasPortsInactive,
+		endpointOpts["network"].Region)
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["ports_no_ips"].Metric,
-		prometheus.GaugeValue, portsWithNoIP)
+		prometheus.GaugeValue, portsWithNoIP,
+		endpointOpts["network"].Region)
 
 	return nil
 }
@@ -279,7 +295,8 @@ func ListNetworkIPAvailabilities(exporter *BaseOpenStackExporter, ch chan<- prom
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["network_ip_availabilities_total"].Metric,
 				prometheus.GaugeValue, totalIPs, NetworkIPAvailabilities.NetworkID,
 				NetworkIPAvailabilities.NetworkName, strconv.Itoa(SubnetIPAvailability.IPVersion), SubnetIPAvailability.CIDR,
-				SubnetIPAvailability.SubnetName, projectID)
+				SubnetIPAvailability.SubnetName, projectID,
+				endpointOpts["network"].Region)
 
 			usedIPs, err := strconv.ParseFloat(SubnetIPAvailability.UsedIPs, 64)
 			if err != nil {
@@ -288,7 +305,8 @@ func ListNetworkIPAvailabilities(exporter *BaseOpenStackExporter, ch chan<- prom
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["network_ip_availabilities_used"].Metric,
 				prometheus.GaugeValue, usedIPs, NetworkIPAvailabilities.NetworkID,
 				NetworkIPAvailabilities.NetworkName, strconv.Itoa(SubnetIPAvailability.IPVersion), SubnetIPAvailability.CIDR,
-				SubnetIPAvailability.SubnetName, projectID)
+				SubnetIPAvailability.SubnetName, projectID,
+				endpointOpts["network"].Region)
 		}
 	}
 
@@ -331,17 +349,21 @@ func ListRouters(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) e
 
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["l3_agent_of_router"].Metric,
 				prometheus.GaugeValue, float64(state), router.ID, agent.ID,
-				agent.HAState, strconv.FormatBool(agent.Alive), strconv.FormatBool(agent.AdminStateUp), agent.Host)
+				agent.HAState, strconv.FormatBool(agent.Alive), strconv.FormatBool(agent.AdminStateUp), agent.Host,
+				endpointOpts["network"].Region)
 		}
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["router"].Metric,
 			prometheus.GaugeValue, 1, router.ID, router.Name, router.ProjectID,
-			strconv.FormatBool(router.AdminStateUp), router.Status, router.GatewayInfo.NetworkID)
+			strconv.FormatBool(router.AdminStateUp), router.Status, router.GatewayInfo.NetworkID,
+			endpointOpts["network"].Region)
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["routers"].Metric,
-		prometheus.GaugeValue, float64(len(allRouters)))
+		prometheus.GaugeValue, float64(len(allRouters)),
+		endpointOpts["network"].Region)
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["routers_not_active"].Metric,
-		prometheus.GaugeValue, float64(failedRouters))
+		prometheus.GaugeValue, float64(failedRouters),
+		endpointOpts["network"].Region)
 
 	return nil
 }

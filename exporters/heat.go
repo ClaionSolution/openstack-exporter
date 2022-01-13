@@ -70,8 +70,8 @@ type HeatExporter struct {
 }
 
 var defaultHeatMetrics = []Metric{
-	{Name: "stack_status", Labels: []string{"id", "name", "project_id", "status"}, Fn: ListAllStacks},
-	{Name: "stack_status_counter", Labels: []string{"status"}, Fn: nil},
+	{Name: "stack_status", Labels: []string{"id", "name", "project_id", "status", "region_name"}, Fn: ListAllStacks},
+	{Name: "stack_status_counter", Labels: []string{"status", "region_name"}, Fn: nil},
 }
 
 func NewHeatExporter(config *ExporterConfig) (*HeatExporter, error) {
@@ -111,13 +111,15 @@ func ListAllStacks(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric)
 		stack_status_counter[stack.Status]++
 		// Stack status metrics
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["stack_status"].Metric,
-			prometheus.GaugeValue, float64(mapHeatStatus(stack.Status)), stack.ID, stack.Name, stack.Project, stack.Status)
+			prometheus.GaugeValue, float64(mapHeatStatus(stack.Status)), stack.ID, stack.Name, stack.Project, stack.Status,
+			endpointOpts["orchestration"].Region)
 	}
 
 	// Stack status counter metrics
 	for status, count := range stack_status_counter {
 		ch <- prometheus.MustNewConstMetric(
-			exporter.Metrics["stack_status_counter"].Metric, prometheus.GaugeValue, float64(count), status)
+			exporter.Metrics["stack_status_counter"].Metric, prometheus.GaugeValue, float64(count), status,
+			endpointOpts["orchestration"].Region)
 	}
 
 	return nil

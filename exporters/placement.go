@@ -10,10 +10,10 @@ type PlacementExporter struct {
 }
 
 var defaultPlacementMetrics = []Metric{
-	{Name: "resource_total", Fn: ListPlacementResourceProviders, Labels: []string{"hostname", "resourcetype"}},
-	{Name: "resource_allocation_ratio", Labels: []string{"hostname", "resourcetype"}},
-	{Name: "resource_reserved", Labels: []string{"hostname", "resourcetype"}},
-	{Name: "resource_usage", Labels: []string{"hostname", "resourcetype"}},
+	{Name: "resource_total", Fn: ListPlacementResourceProviders, Labels: []string{"hostname", "resourcetype", "region_name"}},
+	{Name: "resource_allocation_ratio", Labels: []string{"hostname", "resourcetype", "region_name"}},
+	{Name: "resource_reserved", Labels: []string{"hostname", "resourcetype", "region_name"}},
+	{Name: "resource_usage", Labels: []string{"hostname", "resourcetype", "region_name"}},
 }
 
 func NewPlacementExporter(config *ExporterConfig) (*PlacementExporter, error) {
@@ -59,13 +59,16 @@ func ListPlacementResourceProviders(exporter *BaseOpenStackExporter, ch chan<- p
 		for k, v := range inventoryResult.Inventories {
 
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["resource_total"].Metric,
-				prometheus.GaugeValue, float64(v.Total), resourceprovider.Name, k)
+				prometheus.GaugeValue, float64(v.Total), resourceprovider.Name, k,
+				endpointOpts["placement"].Region)
 
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["resource_allocation_ratio"].Metric,
-				prometheus.GaugeValue, float64(v.AllocationRatio), resourceprovider.Name, k)
+				prometheus.GaugeValue, float64(v.AllocationRatio), resourceprovider.Name, k,
+				endpointOpts["placement"].Region)
 
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["resource_reserved"].Metric,
-				prometheus.GaugeValue, float64(v.Reserved), resourceprovider.Name, k)
+				prometheus.GaugeValue, float64(v.Reserved), resourceprovider.Name, k,
+				endpointOpts["placement"].Region)
 		}
 
 		usagesResult, err := resourceproviders.GetUsages(exporter.Client, resourceprovider.UUID).Extract()
@@ -75,7 +78,8 @@ func ListPlacementResourceProviders(exporter *BaseOpenStackExporter, ch chan<- p
 
 		for k, v := range usagesResult.Usages {
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["resource_usage"].Metric,
-				prometheus.GaugeValue, float64(v), resourceprovider.Name, k)
+				prometheus.GaugeValue, float64(v), resourceprovider.Name, k,
+				endpointOpts["placement"].Region)
 		}
 
 	}

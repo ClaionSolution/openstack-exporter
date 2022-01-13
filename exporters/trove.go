@@ -80,10 +80,10 @@ func list(client *gophercloud.ServiceClient) pagination.Pager {
 }
 
 var defaultTroveMetrics = []Metric{
-	{Name: "total_instances", Fn: ListAllInstances},
-	{Name: "instance_status", Labels: []string{"datastore_type", "datastore_version", "health_status", "id", "name", "region", "status", "tenant_id"}, Fn: nil},
-	{Name: "instance_volume_size_gb", Labels: []string{"datastore_type", "datastore_version", "health_status", "id", "name", "region", "status", "tenant_id"}, Fn: nil},
-	{Name: "instance_volume_used_gb", Labels: []string{"datastore_type", "datastore_version", "health_status", "id", "name", "region", "status", "tenant_id"}, Fn: nil},
+	{Name: "total_instances", Labels: []string{"region_name"}, Fn: ListAllInstances},
+	{Name: "instance_status", Labels: []string{"datastore_type", "datastore_version", "health_status", "id", "name", "region", "status", "tenant_id", "region_name"}, Fn: nil},
+	{Name: "instance_volume_size_gb", Labels: []string{"datastore_type", "datastore_version", "health_status", "id", "name", "region", "status", "tenant_id", "region_name"}, Fn: nil},
+	{Name: "instance_volume_used_gb", Labels: []string{"datastore_type", "datastore_version", "health_status", "id", "name", "region", "status", "tenant_id", "region_name"}, Fn: nil},
 }
 
 func NewTroveExporter(config *ExporterConfig) (*TroveExporter, error) {
@@ -114,10 +114,11 @@ func ListAllInstances(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metr
 		return err
 	}
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["total_instances"].Metric,
-		prometheus.GaugeValue, float64(len(allInstances)))
+		prometheus.GaugeValue, float64(len(allInstances)),
+		endpointOpts["database"].Region)
 	for _, instance := range allInstances {
 		labelValues := []string{instance.Datastore.Type, instance.Datastore.Version,
-			instance.HealthStatus, instance.ID, instance.Name, instance.Region, instance.Status, instance.TenantID}
+			instance.HealthStatus, instance.ID, instance.Name, instance.Region, instance.Status, instance.TenantID, endpointOpts["database"].Region}
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["instance_status"].Metric,
 			prometheus.GaugeValue, float64(mapInstanceStatus(instance.Status)), labelValues...)
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["instance_volume_size_gb"].Metric,

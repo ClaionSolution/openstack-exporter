@@ -45,10 +45,10 @@ func mapRecordsetStatus(recordsetStatus string) int {
 }
 
 var defaultDesignateMetrics = []Metric{
-	{Name: "zones", Fn: ListZonesAndRecordsets},
-	{Name: "zone_status", Labels: []string{"id", "name", "status", "tenant_id", "type"}, Fn: nil},
-	{Name: "recordsets", Labels: []string{"zone_id", "zone_name", "tenant_id"}, Fn: nil},
-	{Name: "recordsets_status", Labels: []string{"id", "name", "status", "zone_id", "zone_name", "type"}, Fn: nil},
+	{Name: "zones", Labels: []string{"region_name"}, Fn: ListZonesAndRecordsets},
+	{Name: "zone_status", Labels: []string{"id", "name", "status", "tenant_id", "type", "region_name"}, Fn: nil},
+	{Name: "recordsets", Labels: []string{"zone_id", "zone_name", "tenant_id", "region_name"}, Fn: nil},
+	{Name: "recordsets_status", Labels: []string{"id", "name", "status", "zone_id", "zone_name", "type", "region_name"}, Fn: nil},
 }
 
 func NewDesignateExporter(config *ExporterConfig) (*DesignateExporter, error) {
@@ -101,17 +101,20 @@ func ListZonesAndRecordsets(exporter *BaseOpenStackExporter, ch chan<- prometheu
 		}
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["recordsets"].Metric,
-			prometheus.GaugeValue, float64(len(allRecordsets)), zone.ID, zone.Name, zone.ProjectID)
+			prometheus.GaugeValue, float64(len(allRecordsets)), zone.ID, zone.Name, zone.ProjectID,
+			endpointOpts["dns"].Region)
 
 		for _, recordset := range allRecordsets {
 			ch <- prometheus.MustNewConstMetric(exporter.Metrics["recordsets_status"].Metric,
 				prometheus.GaugeValue, float64(mapRecordsetStatus(recordset.Status)), recordset.ID, recordset.Name,
-				recordset.Status, recordset.ZoneID, recordset.ZoneName, recordset.Type)
+				recordset.Status, recordset.ZoneID, recordset.ZoneName, recordset.Type,
+				endpointOpts["dns"].Region)
 		}
 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["zone_status"].Metric,
 			prometheus.GaugeValue, float64(mapZoneStatus(zone.Status)), zone.ID, zone.Name,
-			zone.Status, zone.ProjectID, zone.Type)
+			zone.Status, zone.ProjectID, zone.Type,
+			endpointOpts["dns"].Region)
 
 	}
 
