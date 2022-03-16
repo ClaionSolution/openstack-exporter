@@ -8,6 +8,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/routers"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/networkipavailabilities"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/portsbinding"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/provider"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
@@ -24,7 +25,7 @@ var defaultNeutronMetrics = []Metric{
 	{Name: "floating_ips", Labels: []string{"region_name"}, Fn: ListFloatingIps},
 	{Name: "floating_ips_associated_not_active", Labels: []string{"region_name"}},
 	{Name: "floating_ip", Labels: []string{"id", "floating_network_id", "router_id", "status", "project_id", "floating_ip_address", "region_name"}},
-	{Name: "network", Labels: []string{"id", "name", "admin_state_up", "status", "tenant_id", "project_id", "region_name"}, Fn: ListNetworks},
+	{Name: "network", Labels: []string{"id", "name", "admin_state_up", "status", "tenant_id", "project_id", "region_name", "type", "physical_network", "seg_id"}, Fn: ListNetworks},
 	{Name: "networks", Labels: []string{"region_name"}},
 	{Name: "security_groups", Labels: []string{"region_name"}, Fn: ListSecGroups},
 	{Name: "subnets", Labels: []string{"region_name"}, Fn: ListSubnets},
@@ -144,14 +145,19 @@ func ListAgentStates(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metri
 
 // ListNetworks : Count total number of instantiated Networks
 func ListNetworks(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) error {
-	var allNetworks []networks.Network
+	type NetworkWithProvider struct {
+		networks.Network
+		provider.NetworkProviderExt
+	}
+
+	var allNetworks []NetworkWithProvider
 
 	allPagesNetworks, err := networks.List(exporter.Client, networks.ListOpts{}).AllPages()
 	if err != nil {
 		return err
 	}
 
-	allNetworks, err = networks.ExtractNetworks(allPagesNetworks)
+	err = networks.ExtractNetworksInto(allPagesNetworks, &allNetworks)
 	if err != nil {
 		return err
 	}
@@ -160,7 +166,7 @@ func ListNetworks(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) 
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["network"].Metric,
 			prometheus.GaugeValue, 1,
 			network.ID, network.Name, strconv.FormatBool(network.AdminStateUp), network.Status, network.TenantID, network.ProjectID,
-			endpointOpts["network"].Region)
+			endpointOpts["network"].Region, network.NetworkProviderExt.NetworkType, network.NetworkProviderExt.PhysicalNetwork, network.NetworkProviderExt.SegmentationID)
 	}
 
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["networks"].Metric,
