@@ -7,10 +7,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack"
-	"github.com/gophercloud/utils/gnocchi"
-	"github.com/gophercloud/utils/openstack/clientconfig"
+	"github.com/nexclipper/gophercloud"
+	"github.com/nexclipper/gophercloud/openstack"
+	"github.com/nexclipper/utils/gnocchi"
+	"github.com/nexclipper/utils/openstack/clientconfig"
 )
 
 func AuthenticatedClient(opts *clientconfig.ClientOpts, transport *http.Transport) (*gophercloud.ProviderClient, error) {

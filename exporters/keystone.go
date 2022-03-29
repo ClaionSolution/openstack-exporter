@@ -3,11 +3,11 @@ package exporters
 import (
 	"strconv"
 
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/domains"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/groups"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/regions"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/users"
+	"github.com/nexclipper/gophercloud/openstack/identity/v3/domains"
+	"github.com/nexclipper/gophercloud/openstack/identity/v3/groups"
+	"github.com/nexclipper/gophercloud/openstack/identity/v3/projects"
+	"github.com/nexclipper/gophercloud/openstack/identity/v3/regions"
+	"github.com/nexclipper/gophercloud/openstack/identity/v3/users"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

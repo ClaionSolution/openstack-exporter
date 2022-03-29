@@ -1,8 +1,8 @@
 package exporters
 
 import (
-	"github.com/gophercloud/gophercloud/openstack/objectstorage/v1/containers"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/nexclipper/gophercloud/openstack/objectstorage/v1/containers"
+	"github.com/nexclipper/gophercloud/pagination"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

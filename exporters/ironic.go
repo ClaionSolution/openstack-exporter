@@ -3,8 +3,8 @@ package exporters
 import (
 	"strconv"
 
-	"github.com/gophercloud/gophercloud/openstack/baremetal/apiversions"
-	"github.com/gophercloud/gophercloud/openstack/baremetal/v1/nodes"
+	"github.com/nexclipper/gophercloud/openstack/baremetal/apiversions"
+	"github.com/nexclipper/gophercloud/openstack/baremetal/v1/nodes"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

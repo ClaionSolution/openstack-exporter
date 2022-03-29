@@ -1,8 +1,8 @@
 package exporters
 
 import (
-	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/amphorae"
-	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/loadbalancers"
+	"github.com/nexclipper/gophercloud/openstack/loadbalancer/v2/amphorae"
+	"github.com/nexclipper/gophercloud/openstack/loadbalancer/v2/loadbalancers"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

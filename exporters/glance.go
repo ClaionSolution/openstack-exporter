@@ -1,7 +1,7 @@
 package exporters
 
 import (
-	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
+	"github.com/nexclipper/gophercloud/openstack/imageservice/v2/images"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

@@ -28,7 +28,7 @@ parts:
   openstack-exporter:
     plugin: go
     source: ./
-    go-importpath: github.com/openstack-exporter/openstack-exporter
+    go-importpath: github.com/nexclipper/openstack-exporter
     go-channel: latest/stable
     parse-info: []
     build-packages:

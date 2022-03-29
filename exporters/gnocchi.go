@@ -1,8 +1,8 @@
 package exporters
 
 import (
-	"github.com/gophercloud/utils/gnocchi/metric/v1/metrics"
-	"github.com/gophercloud/utils/gnocchi/metric/v1/status"
+	"github.com/nexclipper/utils/gnocchi/metric/v1/metrics"
+	"github.com/nexclipper/utils/gnocchi/metric/v1/status"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

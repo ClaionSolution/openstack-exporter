@@ -6,20 +6,20 @@ import (
 	"os"
 	"sort"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack"
-	"github.com/gophercloud/gophercloud/openstack/compute/apiversions"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/aggregates"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/availabilityzones"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/extendedserverattributes"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/hypervisors"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/limits"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/secgroups"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/services"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/usage"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	"github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
+	"github.com/nexclipper/gophercloud"
+	"github.com/nexclipper/gophercloud/openstack"
+	"github.com/nexclipper/gophercloud/openstack/compute/apiversions"
+	"github.com/nexclipper/gophercloud/openstack/compute/v2/extensions/aggregates"
+	"github.com/nexclipper/gophercloud/openstack/compute/v2/extensions/availabilityzones"
+	"github.com/nexclipper/gophercloud/openstack/compute/v2/extensions/extendedserverattributes"
+	"github.com/nexclipper/gophercloud/openstack/compute/v2/extensions/hypervisors"
+	"github.com/nexclipper/gophercloud/openstack/compute/v2/extensions/limits"
+	"github.com/nexclipper/gophercloud/openstack/compute/v2/extensions/secgroups"
+	"github.com/nexclipper/gophercloud/openstack/compute/v2/extensions/services"
+	"github.com/nexclipper/gophercloud/openstack/compute/v2/extensions/usage"
+	"github.com/nexclipper/gophercloud/openstack/compute/v2/flavors"
+	"github.com/nexclipper/gophercloud/openstack/compute/v2/servers"
+	"github.com/nexclipper/gophercloud/openstack/identity/v3/projects"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -144,8 +144,7 @@ func ListNovaAgentState(exporter *BaseOpenStackExporter, ch chan<- prometheus.Me
 func ListHypervisors(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric) error {
 	var allHypervisors []hypervisors.Hypervisor
 	var allAggregates []aggregates.Aggregate
-
-	allPagesHypervisors, err := hypervisors.List(exporter.Client).AllPages()
+	allPagesHypervisors, err := hypervisors.List(exporter.Client, nil).AllPages()
 	if err != nil {
 		return err
 	}

@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/hashicorp/go-uuid"
+	"github.com/nexclipper/gophercloud"
+	"github.com/nexclipper/openstack-exporter/log"
+	"github.com/nexclipper/utils/openstack/clientconfig"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 )
 
 type Metric struct {

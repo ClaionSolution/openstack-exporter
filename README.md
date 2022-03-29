@@ -1,7 +1,7 @@
 # OpenStack Exporter for Prometheus [![Build Status][buildstatus]][circleci]
 
 A [OpenStack](https://openstack.org/) exporter for prometheus written in Golang using the
-[gophercloud](https://github.com/gophercloud/gophercloud) library.
+[gophercloud](https://github.com/nexclipper/gophercloud) library.
 
 ### Deployment options
 
@@ -10,7 +10,7 @@ The openstack-exporter can be deployed using the following mechanisms:
 * Via docker images directly from our repositories
 * Via snaps
 * By using [kolla-ansible](https://github.com/openstack/kolla-ansible) by setting enable_prometheus_openstack_exporter: true
-* By using [helm charts](https://github.com/openstack-exporter/helm-charts)
+* By using [helm charts](https://github.com/nexclipper/helm-charts)
 
 ### Containers and binaries build status
 

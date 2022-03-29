@@ -1,10 +1,10 @@
 package exporters
 
 import (
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack/db/v1/datastores"
-	"github.com/gophercloud/gophercloud/openstack/db/v1/instances"
-	"github.com/gophercloud/gophercloud/pagination"
+	"github.com/nexclipper/gophercloud"
+	"github.com/nexclipper/gophercloud/openstack/db/v1/datastores"
+	"github.com/nexclipper/gophercloud/openstack/db/v1/instances"
+	"github.com/nexclipper/gophercloud/pagination"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

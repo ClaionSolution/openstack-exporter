@@ -3,7 +3,7 @@ package exporters
 import (
 	"strconv"
 
-	"github.com/gophercloud/gophercloud/openstack/containerinfra/v1/clusters"
+	"github.com/nexclipper/gophercloud/openstack/containerinfra/v1/clusters"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

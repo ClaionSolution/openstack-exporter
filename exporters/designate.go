@@ -3,8 +3,8 @@ package exporters
 import (
 	"strings"
 
-	"github.com/gophercloud/gophercloud/openstack/dns/v2/recordsets"
-	"github.com/gophercloud/gophercloud/openstack/dns/v2/zones"
+	"github.com/nexclipper/gophercloud/openstack/dns/v2/recordsets"
+	"github.com/nexclipper/gophercloud/openstack/dns/v2/zones"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
