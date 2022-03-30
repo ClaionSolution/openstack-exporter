@@ -76,7 +76,7 @@ var defaultNovaMetrics = []Metric{
 	{Name: "local_storage_used_bytes", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}},
 	{Name: "free_disk_bytes", Labels: []string{"hostname", "availability_zone", "aggregates", "region_name"}},
 	{Name: "server_status", Labels: []string{"id", "status", "name", "tenant_id", "user_id", "address_ipv4",
-		"address_ipv6", "host_id", "hypervisor_hostname", "uuid", "availability_zone", "flavor_id", "region_name"}},
+		"address_ipv6", "host_id", "hypervisor_hostname", "uuid", "availability_zone", "flavor", "region_name", "addresses"}},
 	{Name: "limits_vcpus_max", Labels: []string{"tenant", "tenant_id", "region_name"}, Fn: ListComputeLimits, Slow: true},
 	{Name: "limits_vcpus_used", Labels: []string{"tenant", "tenant_id", "region_name"}, Slow: true},
 	{Name: "limits_memory_max", Labels: []string{"tenant", "tenant_id", "region_name"}, Slow: true},
@@ -305,13 +305,21 @@ func ListAllServers(exporter *BaseOpenStackExporter, ch chan<- prometheus.Metric
 	ch <- prometheus.MustNewConstMetric(exporter.Metrics["total_vms"].Metric,
 		prometheus.GaugeValue, float64(len(allServers)),
 		endpointOpts["compute"].Region)
-
+	
 	// Server status metrics
 	for _, server := range allServers {
+		var addressStr []string
+		for _, v := range server.Addresses {
+			addressStr = append(addressStr, fmt.Sprintf("%#v", v))
+		}
+
+		addressJson, _ := json.Marshal(server.Addresses)
+		flavorJson, _ := json.Marshal(server.Flavor)
+
 		ch <- prometheus.MustNewConstMetric(exporter.Metrics["server_status"].Metric,
 			prometheus.GaugeValue, float64(mapServerStatus(server.Status)), server.ID, server.Status, server.Name, server.TenantID,
-			server.UserID, server.AccessIPv4, server.AccessIPv6, server.HostID, server.HypervisorHostname, server.ID, server.AvailabilityZone, fmt.Sprintf("%v", server.Flavor["id"]),
-			endpointOpts["compute"].Region)
+			server.UserID, server.AccessIPv4, server.AccessIPv6, server.HostID, server.HypervisorHostname, server.ID, server.AvailabilityZone, string(flavorJson),
+			endpointOpts["compute"].Region, string(addressJson))
 
 	}
 
